@@ -1,27 +1,41 @@
 ---
-title: This is my first post.
+title: 诊断性能问题的工作流程(1)
 description: This is a post on My Blog about agile frameworks.
-date: 2018-05-01
+date: 2020-05-06
 tags:
-  - another-tag
+  - C#
+  - csharp
+  - diagnosing
+  - gc
+  - perfview
+
 layout: layouts/post.njk
+---
+# 关于原作者
+
+[@Maoni Stephens](https://twitter.com/maoni0)
+原作者Twitter：[https://twitter.com/maoni0](https://twitter.com/maoni0)
+原作者Github：[https://github.com/Maoni0](https://github.com/Maoni0)
+
+![authorize](/img/1587561145552-0d8a560c-3b7d-443a-badc-a98ddbb6e7bf.png)
+
+如果这篇文章可以帮到您，那么这将是我最大的荣幸，希望您点进原文，在文章下方留下善意的回复，您的支持将是这些可敬的社区磐石保持创作激情中最大的一部分:)
+
+[点击此处访问原文](https://devblogs.microsoft.com/dotnet/work-flow-of-diagnosing-memory-performance-issues-part-1)
+
+**中文版本将不会以任何形式收费，版权属与原作者**
 
 ---
+在此篇文章中,我会讨论一些关于怎样对PerfView做出贡献的内容,然后继续分析GCStats.您可以直接[跳到分析部分](https://devblogs.microsoft.com/dotnet/work-flow-of-diagnosing-memory-performance-issues-part-1/#continuing-the-analysis).
 
-# 作者授权
-
-## 正文
-
-在此篇文章中,我将讨论一些有关如何为PerfView做出贡献的内容,然后继续进行GCStats分析. 如果您喜欢,可以直接[跳转到分析部分](https://devblogs.microsoft.com/dotnet/work-flow-of-diagnosing-memory-performance-issues-part-1/#continuing-the-analysis).
-
-对于分析工具,有一个令我沮丧的事情,市面上有很多的内存性能工具,但很少有针对通用类型以及与我所服务的客户的.所有的工具都很基础,很少有工具能进行中级和高级分析.
+对于分析工具,有一点令我沮丧的事情,市面上有很多的内存性能工具,但很少有针对通用类型以及与我所服务的客户的.所有的工具都很基础,很少有工具能进行中级和高级分析.
 我知道有很多人在抱怨PerfView的可用性-我确实认为有一些抱怨是正确的.尽管如此,我还是喜欢PerfView,因为这是它往往是我唯一一个能用来完成工作的工具.
 
-我希望大家理解
+我希望大家可以理解
 
 1) 我们对PerfView的精力非常有限.
   我们没有类似与Visual Studio org一样完整的工作团队;我们只有部分时间,来自于少部分成员的兼职,所以很难满足所有用户的要求.
-2) 在进行高级分析时,情况会变得非常复杂,这自然意味着实现可用性没有那么简单-当有很多需要关注的细节时,列就会很快的变得十分庞大.
+2) 在进行高级分析时,情况会变得非常复杂,这意味着实现可用性没有那么简单-当有很多需要关注的细节时,列就会很快的变得十分庞大.
 
 
  对类似PerfView之类的项目做出贡献,是对`.NET Core`做出贡献的绝佳方式,他没有运行时本身那么陡峭的学习曲线,但是您的贡献可能会的帮助人们节省大量时间. 您您可以从克隆[repo](https://github.com/microsoft/perfview/) 并编译它开始. 然后您通过单步执行代码来学习了 – IMO 如果您可以单步执行代码, 这往往是最好的了解新鲜事物的方法. 影响我在此讨论内容的代码大部分都位于2个文件中 – src\TraceEvent\Computers\TraceManagedProcess.cs and src\PerfView\GcStats.cs. 如果您搜索诸如 Clr.EventName (例如,Clr.GCStart,Clr.GCStop), 这也就是进行事件分析的地方 (您不需要关心实际对于跟踪的解析 – 这是在其他地方处理的).所以对于GC的分析就是这个文件中的[GLAD](https://devblogs.microsoft.com/dotnet/glad-part-2/) (GC Latency Analysis and Diagnostics)库.GcStats.cs使用它来显示您在GCStats视图中看到的东西,它是一个HTML文件. 如果您想在自己的工具上展示GC的相关信息,GCStats.cs是一个很好的使用GLAD的例子.
@@ -38,24 +52,17 @@ layout: layouts/post.njk
    [omitted]
 
    gc-collect   仅以极低的性能开销跟踪收集GC
-
 ```
 
 您可以使用dotnet-trace命令,在Linux上收集跟踪信息.
 
-<span style="color:red">dotnet trace collect -p <pid> -o <outputpath> --profile gc-collect</span>
+**` dotnet trace collect -p <pid> -o <outputpath> --profile gc-collect`**
 
 然后在Windows上用PerfView进行展示.当您查看GCStats视图时,从使用者的角度来看,唯一的不同是:在Windows进行收集跟踪,您可以看到所有的托管线程.而在Linux下收集跟踪则只包含您指定的PID线程的线程.
 
 在这篇文章中,我将重点介绍您看到的GCStats表格. 我会展示一个例子. 流程的第一张表:“GC Rollup By Generation” –
 
-<style>
-  table, th, td {
-    border: 1px solid black;
-  }
-  </style>
-
-<!-- ![WorkFlow-GCRollupByGeneration]({{site.baseurl}}/images/WorkFlow-GCRollupByGeneration.png) -->
+![WorkFlow-GCRollupByGeneration](/img/WorkFlow-GCRollupByGeneration.png)
 
 我忽略了`Alloc MB/MSec GC`和`Survived MB/MSec GC`列 – 他们在我开始研究PerfView之前就已经存在了,如果能把他们修复一下,让它们更有意义就更好了,但我一直没有动手.
 
@@ -63,7 +70,7 @@ layout: layouts/post.njk
 
 如果我们查看上一个表, 马上我们就会注意到gen2的平均中断时间比gen0/1的GC大得多. 我们可以猜测对于`第二代的GC`可能没有经历过中断,因为`Max Peak MB(最大峰值MB)`大约为13GB,如果我们要遍历所有的内存,大概要花费167ms.所以,这些可能是后台GC(Background GC),这一点在`Rollup`表下方的 “Gen 2 for pid: process_name” 表中得到了确认 (我删除了一些列,这样它不会太宽了) –
 
-<!-- ![WorkFlow-GCRollupByGeneration2]({{site.baseurl}}/images/WorkFlow-GCRollupByGeneration2.png) -->
+![WorkFlow-GCRollupByGeneration2](/img/WorkFlow-GCRollupByGeneration2.png)
 
 2B表示在后台执行的二代GC. 如果您想知道其他的一些组合, 您只需要将鼠标悬停在"Gen"的列标题上,您将看到以下文本:
 
@@ -92,7 +99,7 @@ bool blocking
 下面是此时您将会看到的示例图片(处于隐私原因,我删除了进程名字) - 
 
 
-![WorkFlow1-0]({{ site.baseurl }}/images/WorkFlow1-0.jpg)
+![WorkFlow1-0](/img/WorkFlow1-0.jpg)
 
 
 如果您选择第一个SuspendEEStart和第一个RestartEEStop上的时间戳,这是第一次的中断.

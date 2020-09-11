@@ -1,10 +1,10 @@
 {
-  "title": "Title of the website. Update me.",
+  "title": "Tomato Punk",
   "url": "https://update-me.com",
   "domain": "update-me.com",
-  "description": "Description of the website. Update me.",
-  "genre": "Insert a schema.org genre",
-  "googleAnalyticsId": "GA ID. Update me",
+  "description": "番茄朋克，一个中国软件开发工程师的自娱自乐",
+  "genre": "Go,Golang,C#,Csharp,Book,China",
+  "googleAnalyticsId": "UA-177747693-1",
   "feed": {
     "subtitle": "Subtitle. Update me.",
     "filename": "feed.xml",
@@ -16,10 +16,10 @@
     "url": "https://update-me.com/feed/feed.json"
   },
   "author": {
-    "name": "Author Name. Update me.",
+    "name": "Tomato Punk",
     "twitterHandle": "update_me"
   },
   "publisher": {
-    "name": "Publisher name. Update me."
+    "name": "Shaun Murphy"
   }
 }
